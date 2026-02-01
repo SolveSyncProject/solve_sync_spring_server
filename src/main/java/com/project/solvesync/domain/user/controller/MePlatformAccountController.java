@@ -16,6 +16,9 @@ public class MePlatformAccountController {
 
     private final PlatformAccountService platformAccountService;
 
+    /**
+     * 특정 플랫폼의 handle 등록/갱신(upsert)
+     */
     @PostMapping
     public BaseResponse<Void> upsert(
             @RequestHeader("X-User-Id") Long userId,
@@ -25,6 +28,9 @@ public class MePlatformAccountController {
         return BaseResponse.success();
     }
 
+    /**
+     * 내 플랫폼 계정 목록 조회
+     */
     @GetMapping
     public BaseResponse<List<PlatformAccountDtos.Response>> list(
             @RequestHeader("X-User-Id") Long userId
