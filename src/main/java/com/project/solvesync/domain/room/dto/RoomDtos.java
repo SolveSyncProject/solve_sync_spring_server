@@ -39,7 +39,6 @@ public class RoomDtos {
 
     public record CreateResponse(Long roomId, String inviteCode, RoomStatus status) {}
 
-    /** ✅ 공개방 리스트에서 사용할 아이템 (RoomService가 참조하므로 반드시 존재해야 함) */
     public record PublicRoomItem(
             Long roomId,
             String name,
@@ -58,6 +57,7 @@ public class RoomDtos {
             String timezone,
             OffsetDateTime startAt,
             OffsetDateTime activatedAt,
+            OffsetDateTime evaluationStartAt,  // ✅ 추가됨
             Rule rule,
             List<RulePlatform> rulePlatforms
     ) {}

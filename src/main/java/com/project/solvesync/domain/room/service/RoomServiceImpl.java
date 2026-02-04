@@ -139,6 +139,7 @@ public class RoomServiceImpl implements RoomService {
                 room.getTimezone(),
                 room.getStartAt(),
                 room.getActivatedAt(),
+                room.getEvaluationStartAt(),
                 rule,
                 rulePlatforms
         );
