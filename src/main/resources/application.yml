@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: SolveSync
+
+  security:
+    user:
+      name: user
+      password: 1234
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/solvesync?serverTimezone=Asia/Seoul&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: rootpw
+
+  jpa:
+    hibernate:
+      ddl-auto: create   # (Flyway 쓸 거면 validate/none 추천)
+
+  flyway:
+    enabled: false
