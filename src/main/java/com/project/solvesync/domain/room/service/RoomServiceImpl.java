@@ -6,17 +6,17 @@ import com.project.solvesync.domain.membership.entity.RoomMembership;
 import com.project.solvesync.domain.room.dto.RoomDtos;
 import com.project.solvesync.domain.room.entity.*;
 import com.project.solvesync.domain.room.repository.StudyRoomRepository;
+import com.project.solvesync.domain.user.entity.UserPlatformAccount;
+import com.project.solvesync.domain.user.repository.UserPlatformAccountRepository;
+import com.project.solvesync.domain.user.repository.UserRepository;
 import com.project.solvesync.global.exception.BaseException;
 import com.project.solvesync.global.exception.BaseResponseStatus;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,91 +24,91 @@ import java.util.stream.Collectors;
 public class RoomServiceImpl implements RoomService {
 
     private final StudyRoomRepository roomRepository;
-
-    private static final SecureRandom RANDOM = new SecureRandom();
-    private static final char[] CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray(); // 헷갈리는 문자 제거
+    private final UserPlatformAccountRepository userPlatformAccountRepository;
+    private final UserRepository userRepository;
 
     @Override
     public RoomDtos.CreateResponse createRoom(Long ownerId, RoomDtos.CreateRequest req) {
 
-        // 1) listed 정책 검증: PRIVATE는 게시판 노출 불가(원하면 완화 가능)
-        if (req.visibility() == RoomVisibility.PRIVATE && req.listed()) {
-            throw new BaseException(BaseResponseStatus.BAD_REQUEST, "PRIVATE 방은 listed=true로 설정할 수 없습니다.");
+        // 0) 유저 존재 검증
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new BaseException(BaseResponseStatus.USER_NOT_FOUND));
+
+        // 1) ownerPlatforms 유효성 + 플랫폼 계정 존재 검증 & 스냅샷 채우기
+        if (req.ownerPlatforms() == null || req.ownerPlatforms().isEmpty()) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "ownerPlatforms는 최소 1개 이상 필요합니다.");
         }
 
-        // 2) rulePlatforms 중복 검증
-        Set<Platform> rulePlatformSet = new HashSet<>();
-        for (RoomDtos.RulePlatform rp : req.rulePlatforms()) {
-            if (!rulePlatformSet.add(rp.platform())) {
-                throw new BaseException(BaseResponseStatus.BAD_REQUEST, "rulePlatforms에 중복 플랫폼이 존재합니다: " + rp.platform());
-            }
+        Set<Platform> ownerPlatforms = new LinkedHashSet<>(req.ownerPlatforms());
+        if (ownerPlatforms.size() != req.ownerPlatforms().size()) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "ownerPlatforms에 중복 플랫폼이 존재합니다.");
         }
 
-        // 3) ownerPlatforms ⊆ rulePlatforms 검증
-        Set<Platform> ownerPlatformSet = new HashSet<>(req.ownerPlatforms());
-        if (!rulePlatformSet.containsAll(ownerPlatformSet)) {
-            throw new BaseException(BaseResponseStatus.INVALID_PLATFORM_SELECTION);
+        List<ParticipationPlatform> ownerParticipationPlatforms = new ArrayList<>();
+        for (Platform p : ownerPlatforms) {
+            UserPlatformAccount account = userPlatformAccountRepository.findByUserIdAndPlatform(ownerId, p)
+                    .orElseThrow(() -> new BaseException(
+                            BaseResponseStatus.PLATFORM_ACCOUNT_REQUIRED,
+                            "방장은 방 생성 전 플랫폼 계정을 등록해야 합니다. missing=" + p
+                    ));
+            ownerParticipationPlatforms.add(new ParticipationPlatform(p, account.getId(), account.getHandle()));
         }
 
-        // 4) invite code 발급
-        String inviteCode = generateUniqueInviteCode();
+        // 2) 룰 유효성 검증
+        validateRule(req);
 
-        // 5) Room 생성
+        // 3) 룰 플랫폼 검증
+        validateRulePlatforms(req.rulePlatforms());
+
+        // 4) 룸 생성
         StudyRoom room = StudyRoom.create(
                 ownerId,
-                req.name(),
-                req.description(),
+                req.name().trim(),
                 req.visibility(),
                 req.listed(),
-                req.timezone(),
-                req.startAt(),
-                inviteCode
+                generateInviteCode(),
+                req.timezone().trim(),
+                req.startAt()
         );
 
-        // 6) Rule attach
-        RoomRule rule = RoomRule.create(
-                req.rule().periodUnit(),
-                req.rule().requiredCount(),
-                req.rule().includeHolidays()
-        );
+        // 5) 룰 생성 + attach
+        RoomRule rule = RoomRule.create(req.rule().periodUnit(), req.rule().requiredCount(), req.rule().includeHolidays());
         room.attachRule(rule);
 
-        // 7) RulePlatforms attach
+        // 6) RulePlatforms attach
         for (RoomDtos.RulePlatform rp : req.rulePlatforms()) {
-            RoomRulePlatform entity = RoomRulePlatform.create(rp.platform(), rp.tierMin(), rp.tierMax());
+            int min = normalizeTier(rp.tierMin());
+            int max = normalizeTier(rp.tierMax());
+            RoomRulePlatform entity = RoomRulePlatform.create(rp.platform(), min, max);
             room.addRulePlatform(entity);
         }
 
-        // 8) Owner membership 생성 + 참여 플랫폼 저장
-        List<ParticipationPlatform> ownerPlatforms = ownerPlatformSet.stream()
-                .map(ParticipationPlatform::of)
-                .collect(Collectors.toList());
-
-        RoomMembership ownerMembership = RoomMembership.owner(room, ownerId, ownerPlatforms);
+        // 7) OWNER 멤버십 생성 시 플랫폼 스냅샷 채움
+        RoomMembership ownerMembership = RoomMembership.owner(room, ownerId, ownerParticipationPlatforms);
         room.addMembership(ownerMembership);
 
-        // 9) 저장 (cascade로 rule/rulePlatforms/membership 같이 저장)
-        StudyRoom saved = roomRepository.save(room);
+        // 8) save
+        roomRepository.save(room);
 
-        return new RoomDtos.CreateResponse(saved.getId(), saved.getInviteCode());
+        return new RoomDtos.CreateResponse(room.getId(), room.getInviteCode(), room.getStatus());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<RoomDtos.PublicRoomItem> listPublicRooms(String keyword, int page, int size) {
-        if (page < 0 || size <= 0 || size > 100) {
-            throw new BaseException(BaseResponseStatus.BAD_REQUEST, "page/size 값이 올바르지 않습니다.");
-        }
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 50);
 
-        List<StudyRoom> rooms = roomRepository.findPublicListedDraftRooms(
+        Pageable pageable = PageRequest.of(safePage, safeSize);
+        Page<StudyRoom> result = roomRepository.searchPublicRooms(
                 RoomVisibility.PUBLIC,
                 RoomStatus.DRAFT,
                 keyword,
-                PageRequest.of(page, size)
+                pageable
         );
 
-        return rooms.stream()
-                .map(this::toPublicItem)
+        return result.stream()
+                .map(r -> new RoomDtos.PublicRoomItem(r.getId(), r.getName(), r.getStatus(), r.getTimezone()))
                 .toList();
     }
 
@@ -118,7 +118,30 @@ public class RoomServiceImpl implements RoomService {
         StudyRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new BaseException(BaseResponseStatus.ROOM_NOT_FOUND));
 
-        return toRoomDetail(room);
+        RoomDtos.Rule rule = new RoomDtos.Rule(
+                room.getRule().getPeriodUnit(),
+                room.getRule().getRequiredCount(),
+                room.getRule().isIncludeHolidays()
+        );
+
+        List<RoomDtos.RulePlatform> rulePlatforms = room.getRulePlatforms().stream()
+                .map(rp -> new RoomDtos.RulePlatform(rp.getPlatform(), rp.getTierMin(), rp.getTierMax()))
+                .toList();
+
+        return new RoomDtos.RoomDetail(
+                room.getId(),
+                room.getOwnerId(),
+                room.getName(),
+                room.getStatus(),
+                room.getVisibility(),
+                room.isListed(),
+                room.getInviteCode(),
+                room.getTimezone(),
+                room.getStartAt(),
+                room.getActivatedAt(),
+                rule,
+                rulePlatforms
+        );
     }
 
     @Override
@@ -126,72 +149,65 @@ public class RoomServiceImpl implements RoomService {
         StudyRoom room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new BaseException(BaseResponseStatus.ROOM_NOT_FOUND));
 
-        // 권한: 방장만
         if (!Objects.equals(room.getOwnerId(), actorId)) {
             throw new BaseException(BaseResponseStatus.FORBIDDEN);
-        }
-
-        // 상태 체크
-        if (room.getStatus() == RoomStatus.ENDED) {
-            throw new BaseException(BaseResponseStatus.ROOM_ENDED);
-        }
-        if (room.getStatus() == RoomStatus.ACTIVE) {
-            throw new BaseException(BaseResponseStatus.ROOM_ALREADY_ACTIVE);
         }
         if (room.getStatus() != RoomStatus.DRAFT) {
             throw new BaseException(BaseResponseStatus.ROOM_NOT_DRAFT);
         }
 
-        // 활성화
         room.activateNow();
-
         return new RoomDtos.ActivateResponse(room.getId(), room.getStatus(), room.getActivatedAt());
     }
 
-    private RoomDtos.PublicRoomItem toPublicItem(StudyRoom r) {
-        return new RoomDtos.PublicRoomItem(
-                r.getId(),
-                r.getName(),
-                r.getDescription(),
-                r.getVisibility(),
-                r.isListed(),
-                r.getStatus(),
-                r.getTimezone(),
-                r.getStartAt()
-        );
+    private void validateRule(RoomDtos.CreateRequest req) {
+        int requiredCount = req.rule().requiredCount();
+        if (requiredCount < 0 || requiredCount > 100) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "requiredCount는 0~100 범위여야 합니다.");
+        }
+        if (req.rule().periodUnit() == null) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "periodUnit은 필수입니다.");
+        }
     }
 
-    private RoomDtos.RoomDetail toRoomDetail(StudyRoom r) {
-        return new RoomDtos.RoomDetail(
-                r.getId(),
-                r.getOwnerId(),
-                r.getName(),
-                r.getDescription(),
-                r.getVisibility(),
-                r.isListed(),
-                r.getStatus(),
-                r.getTimezone(),
-                r.getStartAt(),
-                r.getActivatedAt()
-        );
-    }
+    private void validateRulePlatforms(List<RoomDtos.RulePlatform> rulePlatforms) {
+        if (rulePlatforms == null || rulePlatforms.isEmpty()) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "rulePlatforms는 최소 1개 이상 필요합니다.");
+        }
 
-    private String generateUniqueInviteCode() {
-        // 충돌 가능성 낮지만, DB 유니크 + exists 체크로 한 번 더 안전하게
-        for (int i = 0; i < 20; i++) {
-            String code = randomCode(8);
-            if (!roomRepository.existsByInviteCode(code)) {
-                return code;
+        Set<Platform> seen = new HashSet<>();
+        for (RoomDtos.RulePlatform rp : rulePlatforms) {
+            if (rp.platform() == null) {
+                throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "rulePlatforms.platform은 필수입니다.");
+            }
+            if (!seen.add(rp.platform())) {
+                throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "rulePlatforms에 중복 플랫폼이 존재합니다: " + rp.platform());
+            }
+
+            int min = normalizeTier(rp.tierMin());
+            int max = normalizeTier(rp.tierMax());
+
+            if (min != -1 && max != -1 && min > max) {
+                throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tierMin <= tierMax 이어야 합니다. platform=" + rp.platform());
             }
         }
-        throw new BaseException(BaseResponseStatus.INTERNAL_SERVER_ERROR, "초대코드 생성에 실패했습니다.");
     }
 
-    private String randomCode(int len) {
-        char[] buf = new char[len];
-        for (int i = 0; i < len; i++) {
-            buf[i] = CODE_CHARS[RANDOM.nextInt(CODE_CHARS.length)];
+    /**
+     * tier 정책:
+     * - null or -1 : 미지정
+     * - 0 이상 : 지정
+     */
+    private int normalizeTier(Integer tier) {
+        if (tier == null) return -1;
+        if (tier < -1) {
+            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tier는 -1 또는 0 이상이어야 합니다.");
         }
-        return new String(buf);
+        return tier;
+    }
+
+    private String generateInviteCode() {
+        String raw = UUID.randomUUID().toString().replace("-", "");
+        return raw.substring(0, 10);
     }
 }

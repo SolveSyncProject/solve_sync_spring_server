@@ -13,60 +13,54 @@ import java.util.List;
 public class RoomDtos {
 
     public record CreateRequest(
-            @NotBlank String name,
-            String description,
+            @NotBlank @Size(max = 80) String name,
             @NotNull RoomVisibility visibility,
-            boolean listed,                 // ✅ public 게시판 노출 여부
-            @NotBlank String timezone,
+            boolean listed,
+            @NotBlank @Size(max = 40) String timezone,
             @NotNull OffsetDateTime startAt,
 
             @Valid @NotNull Rule rule,
             @Valid @NotEmpty List<RulePlatform> rulePlatforms,
 
-            @NotEmpty List<Platform> ownerPlatforms // 방장이 이 방에서 참여할 플랫폼 선택
+            @NotEmpty List<Platform> ownerPlatforms
     ) {}
 
     public record Rule(
             @NotNull PeriodUnit periodUnit,
-            @Min(1) @Max(10) int requiredCount, // ✅ 플랫폼 합산 카운트
+            @Min(0) @Max(100) int requiredCount,
             boolean includeHolidays
     ) {}
 
     public record RulePlatform(
             @NotNull Platform platform,
-            Integer tierMin,
-            Integer tierMax
+            @Min(-1) Integer tierMin,   // null or -1 = 미지정
+            @Min(-1) Integer tierMax
     ) {}
 
-    public record CreateResponse(Long roomId, String inviteCode) {}
+    public record CreateResponse(Long roomId, String inviteCode, RoomStatus status) {}
 
+    /** ✅ 공개방 리스트에서 사용할 아이템 (RoomService가 참조하므로 반드시 존재해야 함) */
     public record PublicRoomItem(
             Long roomId,
             String name,
-            String description,
-            RoomVisibility visibility,
-            boolean listed,
             RoomStatus status,
-            String timezone,
-            OffsetDateTime startAt
+            String timezone
     ) {}
 
     public record RoomDetail(
             Long roomId,
             Long ownerId,
             String name,
-            String description,
+            RoomStatus status,
             RoomVisibility visibility,
             boolean listed,
-            RoomStatus status,
+            String inviteCode,
             String timezone,
             OffsetDateTime startAt,
-            OffsetDateTime activatedAt
+            OffsetDateTime activatedAt,
+            Rule rule,
+            List<RulePlatform> rulePlatforms
     ) {}
 
-    public record ActivateResponse(
-            Long roomId,
-            RoomStatus status,
-            OffsetDateTime activatedAt
-    ) {}
+    public record ActivateResponse(Long roomId, RoomStatus status, OffsetDateTime activatedAt) {}
 }

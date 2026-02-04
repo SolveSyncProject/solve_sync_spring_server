@@ -5,6 +5,8 @@ import com.project.solvesync.domain.join.dto.JoinDtos;
 import com.project.solvesync.domain.join.entity.JoinRequest;
 import com.project.solvesync.domain.join.entity.JoinRequestStatus;
 import com.project.solvesync.domain.join.repository.JoinRequestRepository;
+import com.project.solvesync.domain.invitation.entity.InvitationStatus;
+import com.project.solvesync.domain.invitation.repository.InvitationRepository;
 import com.project.solvesync.domain.membership.entity.ParticipationPlatform;
 import com.project.solvesync.domain.membership.entity.RoomMembership;
 import com.project.solvesync.domain.membership.repository.RoomMembershipRepository;
@@ -30,6 +32,7 @@ public class JoinServiceImpl implements JoinService {
 
     private final StudyRoomRepository roomRepository;
     private final JoinRequestRepository joinRequestRepository;
+    private final InvitationRepository invitationRepository;
     private final RoomMembershipRepository membershipRepository;
     private final UserPlatformAccountRepository userPlatformAccountRepository;
 
@@ -53,6 +56,11 @@ public class JoinServiceImpl implements JoinService {
         // PENDING 중복 신청 방지
         if (joinRequestRepository.existsByRoom_IdAndUserIdAndStatus(roomId, userId, JoinRequestStatus.PENDING)) {
             throw new BaseException(BaseResponseStatus.JOIN_REQUEST_ALREADY_EXISTS);
+        }
+
+        // 대칭 정책: PENDING 초대가 있으면 신청 불가 (데이터 꼬임 방지)
+        if (invitationRepository.existsByRoom_IdAndInviteeUserIdAndStatus(roomId, userId, InvitationStatus.PENDING)) {
+            throw new BaseException(BaseResponseStatus.JOIN_REQUEST_CONFLICT_INVITATION);
         }
 
         Set<Platform> selected = normalizePlatforms(req.platforms());

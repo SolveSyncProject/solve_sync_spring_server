@@ -15,6 +15,7 @@ import com.project.solvesync.domain.room.entity.StudyRoom;
 import com.project.solvesync.domain.room.repository.StudyRoomRepository;
 import com.project.solvesync.domain.user.entity.UserPlatformAccount;
 import com.project.solvesync.domain.user.repository.UserPlatformAccountRepository;
+import com.project.solvesync.domain.user.service.UserService;
 import com.project.solvesync.global.exception.BaseException;
 import com.project.solvesync.global.exception.BaseResponseStatus;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class InvitationServiceImpl implements InvitationService {
     private final RoomMembershipRepository membershipRepository;
     private final UserPlatformAccountRepository userPlatformAccountRepository;
     private final JoinRequestRepository joinRequestRepository;
+    private final UserService userService;
 
     @Override
     public void invite(Long actorId, Long roomId, InvitationDtos.CreateRequest request) {
@@ -50,7 +52,11 @@ public class InvitationServiceImpl implements InvitationService {
             throw new BaseException(BaseResponseStatus.FORBIDDEN);
         }
 
-        Long inviteeUserId = request.inviteeUserId();
+        Long inviteeUserId = userService.getByUsernameOrThrow(request.inviteeUsername()).getId();
+
+        if (Objects.equals(inviteeUserId, actorId)) {
+            throw new BaseException(BaseResponseStatus.BAD_REQUEST, "자기 자신을 초대할 수 없습니다.");
+        }
 
         // 이미 멤버면 초대 불가
         if (membershipRepository.existsByRoom_IdAndUserId(roomId, inviteeUserId)) {
@@ -67,7 +73,7 @@ public class InvitationServiceImpl implements InvitationService {
             throw new BaseException(BaseResponseStatus.JOIN_REQUEST_ALREADY_EXISTS, "이미 참여 신청(PENDING)이 존재합니다.");
         }
 
-        Invitation inv = Invitation.create(room, actorId, inviteeUserId);
+        Invitation inv = Invitation.create(room, actorId, inviteeUserId, request.message());
         invitationRepository.save(inv);
     }
 
@@ -172,6 +178,7 @@ public class InvitationServiceImpl implements InvitationService {
                 inv.getRoom().getId(),
                 inv.getInviterUserId(),
                 inv.getInviteeUserId(),
+                inv.getMessage(),
                 inv.getStatus()
         );
     }
