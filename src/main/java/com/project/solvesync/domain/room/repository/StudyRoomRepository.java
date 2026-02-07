@@ -10,6 +10,25 @@ import org.springframework.data.repository.query.Param;
 
 public interface StudyRoomRepository extends JpaRepository<StudyRoom, Long> {
 
+    /** 평가 스케줄러에서 ACTIVE 룸을 로딩할 때, rule + rulePlatforms를 한 번에 fetch */
+    @Query("""
+        select distinct r
+        from StudyRoom r
+        join fetch r.rule rr
+        left join fetch r.rulePlatforms rp
+        where r.status = :status
+    """)
+    java.util.List<StudyRoom> findAllByStatusWithRuleAndPlatforms(@Param("status") RoomStatus status);
+
+    @Query("""
+        select distinct r
+        from StudyRoom r
+        left join fetch r.rule rr
+        left join fetch r.rulePlatforms rp
+        where r.id = :roomId
+    """)
+    java.util.Optional<StudyRoom> findWithRuleAndPlatformsById(@Param("roomId") Long roomId);
+
     @Query("""
         select r
         from StudyRoom r

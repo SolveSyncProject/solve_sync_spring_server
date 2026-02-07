@@ -32,6 +32,12 @@ external:
     platform-account-upsert-path: /internal/registry/platform-accounts/upsert
 
 solvesync:
+  evaluation:
+    enabled: false
+    grace-hours: 0
+    scheduler:
+      fixed-delay-ms: 6000
+
   maintenance:
     platform-account:
       enabled: true

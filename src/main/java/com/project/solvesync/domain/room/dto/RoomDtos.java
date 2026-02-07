@@ -33,8 +33,8 @@ public class RoomDtos {
 
     public record RulePlatform(
             @NotNull Platform platform,
-            @Min(-1) Integer tierMin,   // null or -1 = 미지정
-            @Min(-1) Integer tierMax
+            @Min(0) Integer tierMin,   // null  = 미지정
+            @Min(0) Integer tierMax
     ) {}
 
     public record CreateResponse(Long roomId, String inviteCode, RoomStatus status) {}
@@ -62,5 +62,9 @@ public class RoomDtos {
             List<RulePlatform> rulePlatforms
     ) {}
 
-    public record ActivateResponse(Long roomId, RoomStatus status, OffsetDateTime activatedAt) {}
+    /**
+     * activatedAt: ACTIVE 전환 시각
+     * evaluationStartAt: 규칙 평가 루틴 시작(익일 0시, room timezone 기준)
+     */
+    public record ActivateResponse(Long roomId, RoomStatus status, OffsetDateTime activatedAt, OffsetDateTime evaluationStartAt) {}
 }

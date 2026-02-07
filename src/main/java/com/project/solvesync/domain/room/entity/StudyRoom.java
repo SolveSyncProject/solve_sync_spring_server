@@ -7,7 +7,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -56,7 +58,8 @@ public class StudyRoom extends BaseTimeEntity {
 
     /**
      * 규칙 판정(집계) 시작 기준 시각.
-     * 스펙: "ACTIVE 전환 이후 발생한 풀이 이벤트" 기준 → 활성화 시점으로 고정
+     * 스펙(운영 선택): ACTIVE 전환 이후, "익일 0시(룸 타임존 기준)"부터 규칙 평가를 시작한다.
+     * - ACTIVE 당일의 남은 시간(부분일)은 평가 대상에서 제외한다.
      */
     @Column(name = "evaluation_start_at")
     private OffsetDateTime evaluationStartAt;
@@ -119,7 +122,10 @@ public class StudyRoom extends BaseTimeEntity {
     public void activateNow() {
         this.status = RoomStatus.ACTIVE;
         this.activatedAt = OffsetDateTime.now();
-        this.evaluationStartAt = this.activatedAt;
-        // startAt 보정은 제거: 평가는 evaluationStartAt 기준으로만 한다.
+
+        // ✅ 룸 타임존 기준 "익일 0시"부터 평가 시작
+        ZoneId zone = ZoneId.of(this.timezone);
+        LocalDate activatedLocalDate = this.activatedAt.atZoneSameInstant(zone).toLocalDate();
+        this.evaluationStartAt = activatedLocalDate.plusDays(1).atStartOfDay(zone).toOffsetDateTime();
     }
 }

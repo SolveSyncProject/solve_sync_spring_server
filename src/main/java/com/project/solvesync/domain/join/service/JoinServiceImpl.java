@@ -95,6 +95,25 @@ public class JoinServiceImpl implements JoinService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<JoinDtos.MyJoinRequestItem> listMyJoinRequests(Long userId, JoinRequestStatus status) {
+        List<JoinRequest> requests = (status == null)
+                ? joinRequestRepository.findAllByUserIdOrderByIdDesc(userId)
+                : joinRequestRepository.findAllByUserIdAndStatusOrderByIdDesc(userId, status);
+
+        return requests.stream()
+                .map(jr -> new JoinDtos.MyJoinRequestItem(
+                        jr.getId(),
+                        jr.getRoom().getId(),
+                        jr.getRoom().getName(),
+                        jr.getIntroText(),
+                        jr.getStatus(),
+                        new ArrayList<>(jr.getPlatforms())
+                ))
+                .toList();
+    }
+
+    @Override
     public JoinDtos.ApproveResponse approve(Long actorId, Long joinRequestId) {
         JoinRequest jr = joinRequestRepository.findWithRoomById(joinRequestId)
                 .orElseThrow(() -> new BaseException(BaseResponseStatus.JOIN_REQUEST_NOT_FOUND));

@@ -45,6 +45,18 @@ public class JoinController {
         return BaseResponse.success(joinService.listJoinRequests(userId, roomId, status));
     }
 
+    /**
+     * 신청자: 내가 보낸 참가 신청 목록 조회
+     * - status가 없으면 전체 조회
+     */
+    @GetMapping("/me/join-requests")
+    public BaseResponse<List<JoinDtos.MyJoinRequestItem>> listMyJoinRequests(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) JoinRequestStatus status
+    ) {
+        return BaseResponse.success(joinService.listMyJoinRequests(userId, status));
+    }
+
     /** 방장: 신청 승인 → 멤버십 생성 */
     @PostMapping("/join-requests/{joinRequestId}/approve")
     public BaseResponse<JoinDtos.ApproveResponse> approve(

@@ -75,11 +75,9 @@ public class RoomServiceImpl implements RoomService {
         RoomRule rule = RoomRule.create(req.rule().periodUnit(), req.rule().requiredCount(), req.rule().includeHolidays());
         room.attachRule(rule);
 
-        // 6) RulePlatforms attach
+        // 6) RulePlatforms attach  (null=미지정 그대로 저장)
         for (RoomDtos.RulePlatform rp : req.rulePlatforms()) {
-            int min = normalizeTier(rp.tierMin());
-            int max = normalizeTier(rp.tierMax());
-            RoomRulePlatform entity = RoomRulePlatform.create(rp.platform(), min, max);
+            RoomRulePlatform entity = RoomRulePlatform.create(rp.platform(), rp.tierMin(), rp.tierMax());
             room.addRulePlatform(entity);
         }
 
@@ -158,7 +156,7 @@ public class RoomServiceImpl implements RoomService {
         }
 
         room.activateNow();
-        return new RoomDtos.ActivateResponse(room.getId(), room.getStatus(), room.getActivatedAt());
+        return new RoomDtos.ActivateResponse(room.getId(), room.getStatus(), room.getActivatedAt(), room.getEvaluationStartAt());
     }
 
     private void validateRule(RoomDtos.CreateRequest req) {
@@ -185,26 +183,19 @@ public class RoomServiceImpl implements RoomService {
                 throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "rulePlatforms에 중복 플랫폼이 존재합니다: " + rp.platform());
             }
 
-            int min = normalizeTier(rp.tierMin());
-            int max = normalizeTier(rp.tierMax());
+            Integer min = rp.tierMin();
+            Integer max = rp.tierMax();
 
-            if (min != -1 && max != -1 && min > max) {
+            if (min != null && min < 0) {
+                throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tierMin은 0 이상 또는 null 이어야 합니다. platform=" + rp.platform());
+            }
+            if (max != null && max < 0) {
+                throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tierMax는 0 이상 또는 null 이어야 합니다. platform=" + rp.platform());
+            }
+            if (min != null && max != null && min > max) {
                 throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tierMin <= tierMax 이어야 합니다. platform=" + rp.platform());
             }
         }
-    }
-
-    /**
-     * tier 정책:
-     * - null or -1 : 미지정
-     * - 0 이상 : 지정
-     */
-    private int normalizeTier(Integer tier) {
-        if (tier == null) return -1;
-        if (tier < -1) {
-            throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tier는 -1 또는 0 이상이어야 합니다.");
-        }
-        return tier;
     }
 
     private String generateInviteCode() {
