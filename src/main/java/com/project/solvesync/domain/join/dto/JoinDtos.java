@@ -35,6 +35,19 @@ public class JoinDtos {
     ) {}
 
     /**
+     * 신청자(나)용 신청 목록 아이템
+     * - 내가 어떤 방에 어떤 플랫폼으로 신청했는지 확인
+     */
+    public record MyJoinRequestItem(
+            Long joinRequestId,
+            Long roomId,
+            String roomName,
+            String introText,
+            JoinRequestStatus status,
+            List<Platform> platforms
+    ) {}
+
+    /**
      * 승인 응답: 멤버십 생성 결과
      */
     public record ApproveResponse(Long membershipId) {}

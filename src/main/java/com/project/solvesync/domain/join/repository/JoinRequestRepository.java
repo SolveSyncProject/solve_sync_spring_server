@@ -18,4 +18,12 @@ public interface JoinRequestRepository extends JpaRepository<JoinRequest, Long> 
 
     @EntityGraph(attributePaths = {"room"})
     Optional<JoinRequest> findWithRoomById(Long id);
+
+    /** 신청자: 내가 만든 신청 목록 (room까지 함께 로딩) */
+    @EntityGraph(attributePaths = {"room"})
+    List<JoinRequest> findAllByUserIdOrderByIdDesc(Long userId);
+
+    /** 신청자: 내가 만든 신청 목록 (status 필터) */
+    @EntityGraph(attributePaths = {"room"})
+    List<JoinRequest> findAllByUserIdAndStatusOrderByIdDesc(Long userId, JoinRequestStatus status);
 }

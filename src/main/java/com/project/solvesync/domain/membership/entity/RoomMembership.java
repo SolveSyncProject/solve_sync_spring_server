@@ -53,7 +53,6 @@ public class RoomMembership extends BaseTimeEntity {
 
     /**
      * 이 방에서 이 멤버가 참여하는 플랫폼 목록
-     * (추후 UserPlatformAccount FK + handle snapshot을 채우면 검증 워커가 그대로 사용 가능)
      *
      * MVP 편의상 EAGER로 둠 (나중에 트래픽 커지면 LAZY + fetch join으로 최적화)
      */
@@ -103,6 +102,12 @@ public class RoomMembership extends BaseTimeEntity {
     public void kick() {
         if (this.status != MembershipStatus.ACTIVE) return;
         this.status = MembershipStatus.KICKED;
+        this.leftAt = OffsetDateTime.now();
+    }
+
+    public void ban() {
+        if (this.status != MembershipStatus.ACTIVE) return;
+        this.status = MembershipStatus.BANNED;
         this.leftAt = OffsetDateTime.now();
     }
 }

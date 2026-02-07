@@ -11,6 +11,9 @@ public interface JoinService {
 
     List<JoinDtos.JoinRequestItem> listJoinRequests(Long actorId, Long roomId, JoinRequestStatus status);
 
+    /** 신청자: 내가 보낸 참가 신청 목록 조회 */
+    List<JoinDtos.MyJoinRequestItem> listMyJoinRequests(Long userId, JoinRequestStatus status);
+
     JoinDtos.ApproveResponse approve(Long actorId, Long joinRequestId);
 
     void reject(Long actorId, Long joinRequestId);
