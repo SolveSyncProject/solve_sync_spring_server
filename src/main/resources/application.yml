@@ -12,9 +12,41 @@ spring:
     username: root
     password: rootpw
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
   jpa:
     hibernate:
-      ddl-auto: create   # (Flyway 쓸 거면 validate/none 추천)
+      ddl-auto: create
 
   flyway:
     enabled: false
+
+external:
+  collector:
+    enabled: true
+    base-url: http://localhost:8000
+    platform-account-upsert-path: /internal/registry/platform-accounts/upsert
+
+solvesync:
+  maintenance:
+    platform-account:
+      enabled: true
+      timezone: Asia/Seoul
+      start: "01:30"
+      end: "03:00"
+
+  mq:
+    daily-summary:
+      exchange: solvesync.solve.exchange
+      queue: solvesync.solve.daily-summary.queue
+      routing-key: solvesync.solve.daily-summary.upsert
+      concurrency: 3
+
+  solve:
+    http:
+      # MQ 기반이지만, HTTP로 매우 큰 payload가 들어오는 걸 방지하기 위한 상한(설정값)
+      max-batch-size: 5000
