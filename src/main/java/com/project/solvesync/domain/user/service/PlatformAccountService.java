@@ -5,6 +5,6 @@ import com.project.solvesync.domain.user.dto.PlatformAccountDtos;
 import java.util.List;
 
 public interface PlatformAccountService {
-    void upsert(Long userId, PlatformAccountDtos.UpsertRequest req);
+    void upsert(Long userId, PlatformAccountDtos.UpsertRequest request);
     List<PlatformAccountDtos.Response> list(Long userId);
 }
