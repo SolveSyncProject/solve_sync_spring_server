@@ -14,6 +14,10 @@ public enum BaseResponseStatus {
     INTERNAL_SERVER_ERROR(false, HttpStatus.INTERNAL_SERVER_ERROR, 1004, "서버 에러가 발생했습니다."),
     CONFLICT(false, HttpStatus.CONFLICT, 1005, "요청이 충돌했습니다."),
 
+    /* ========= Auth (1100~) ========= */
+    AUTH_UNAUTHORIZED(false, HttpStatus.UNAUTHORIZED, 1100, "인증이 필요합니다."),
+    AUTH_INVALID_TOKEN(false, HttpStatus.UNAUTHORIZED, 1101, "유효하지 않은 토큰입니다."),
+
     /* ========= User / Account (2000~) ========= */
     USER_NOT_FOUND(false, HttpStatus.NOT_FOUND, 2000, "해당 유저 정보가 없습니다."),
     USERNAME_REQUIRED(false, HttpStatus.BAD_REQUEST, 2001, "username은 필수입니다."),

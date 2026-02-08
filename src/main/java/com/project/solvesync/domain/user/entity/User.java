@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * 서비스 내부 사용자.
  *
- * - OAuth 도입 전(MVP)에는 개발/테스트를 위해 "DEV 생성" 엔드포인트로 만들 수 있음.
+ * - Google OAuth2 로그인 성공 시(provider + providerUserId) 기준으로 유저를 upsert(없으면 생성)한다.
  * - username(공개 식별자)은 선택값이며, 설정 시 유니크해야 함.
  */
 @Getter
@@ -20,10 +20,12 @@ import java.util.Objects;
 @Table(
         name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_users_username", columnNames = "username")
+                @UniqueConstraint(name = "uk_users_username", columnNames = "username"),
+                @UniqueConstraint(name = "uk_users_provider_sub", columnNames = {"provider", "provider_user_id"})
         },
         indexes = {
-                @Index(name = "idx_users_username", columnList = "username")
+                @Index(name = "idx_users_username", columnList = "username"),
+                @Index(name = "idx_users_provider_sub", columnList = "provider,provider_user_id")
         }
 )
 public class User extends BaseTimeEntity {
@@ -33,10 +35,36 @@ public class User extends BaseTimeEntity {
     private Long id;
 
     /**
-     * (MVP) 이메일은 선택. OAuth 도입 시 provider-sub/email 등으로 확장 예정.
+     * OAuth2 Provider (ex: GOOGLE)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private AuthProvider provider;
+
+    /**
+     * OAuth2 Provider user id (Google: sub)
+     */
+    @Column(name = "provider_user_id", length = 200)
+    private String providerUserId;
+
+    /**
+     * (선택) 이메일
+     * - Google 로그인 시 받아오면 저장
      */
     @Column(length = 200)
     private String email;
+
+    /**
+     * (선택) 프로필 이름(표시용)
+     */
+    @Column(length = 200)
+    private String name;
+
+    /**
+     * (선택) 프로필 이미지 URL
+     */
+    @Column(length = 500)
+    private String pictureUrl;
 
     /**
      * 공개 식별자 (초대/검색에서 사용).
@@ -46,13 +74,45 @@ public class User extends BaseTimeEntity {
     @Column(length = 50)
     private String username;
 
-    private User(String email, String username) {
+    private User(AuthProvider provider,
+                 String providerUserId,
+                 String email,
+                 String name,
+                 String pictureUrl,
+                 String username) {
+        this.provider = provider;
+        this.providerUserId = normalize(providerUserId);
         this.email = normalize(email);
+        this.name = normalize(name);
+        this.pictureUrl = normalize(pictureUrl);
         this.username = normalize(username);
     }
 
+    /**
+     * (Legacy/Dev) 직접 생성
+     */
     public static User create(String email, String username) {
-        return new User(email, username);
+        return new User(null, null, email, null, null, username);
+    }
+
+    /**
+     * OAuth2 로그인으로 생성
+     */
+    public static User createOAuth(AuthProvider provider,
+                                   String providerUserId,
+                                   String email,
+                                   String name,
+                                   String pictureUrl) {
+        Objects.requireNonNull(provider, "provider");
+        Objects.requireNonNull(providerUserId, "providerUserId");
+        return new User(provider, providerUserId, email, name, pictureUrl, null);
+    }
+
+    /** OAuth2 프로필 최신값 반영(자주 변하는 값만) */
+    public void updateOAuthProfile(String email, String name, String pictureUrl) {
+        this.email = normalize(email);
+        this.name = normalize(name);
+        this.pictureUrl = normalize(pictureUrl);
     }
 
     public void updateUsername(String newUsername) {

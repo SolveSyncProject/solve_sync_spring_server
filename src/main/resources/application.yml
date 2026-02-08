@@ -2,10 +2,27 @@ spring:
   application:
     name: SolveSync
 
+  # (참고) httpBasic/formLogin은 SecurityConfig에서 비활성화함
   security:
     user:
       name: user
       password: 1234
+
+    oauth2:
+      client:
+        registration:
+          google:
+            # ✅ Google Cloud Console에서 OAuth2 Client(ID/Secret) 발급 후 환경변수로 주입 권장
+            client-id: 749329197754-rt5l58kljtvncf6hfme78b46m39j2paa.apps.googleusercontent.com
+            client-secret: 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
+            scope:
+              - profile
+              - email
+            # 기본값(권장): {baseUrl}/login/oauth2/code/{registrationId}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            user-name-attribute: sub
 
   datasource:
     url: jdbc:mysql://localhost:3306/solvesync?serverTimezone=Asia/Seoul&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
@@ -32,9 +49,27 @@ external:
     platform-account-upsert-path: /internal/registry/platform-accounts/upsert
 
 solvesync:
+  # ✅ JWT 설정
+  # - secret은 최소 32바이트 이상 권장
+  # - base64 인코딩 문자열로 넣는 것을 권장 (JwtTokenProvider에서 base64 decode 시도 후 fallback)
+  jwt:
+    secret: ${SOLVESYNC_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_AT_LEAST_32_BYTES}
+    issuer: solvesync
+    access-token-expires-minutes: 120
+
+  # ✅ OAuth2 리다이렉트(옵션)
+  # /oauth2/authorization/google?redirect_uri=http://localhost:3000/oauth2/redirect
+  # 처럼 redirect_uri를 넣으면, 로그인 성공 후 해당 주소로 토큰을 붙여 redirect 한다.
+  # 보안상 allow-list 기반으로만 허용됨.
+  security:
+    oauth2:
+      authorized-redirect-uris:
+        - http://localhost:3000
+        - http://localhost:5173
+
   evaluation:
-    enabled: false
-    grace-hours: 0
+    enabled: true
+    grace-hours: 2
     scheduler:
       fixed-delay-ms: 6000
 
