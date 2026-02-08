@@ -12,7 +12,6 @@ spring:
       client:
         registration:
           google:
-            # ✅ Google Cloud Console에서 OAuth2 Client(ID/Secret) 발급 후 환경변수로 주입 권장
             client-id: 749329197754-rt5l58kljtvncf6hfme78b46m39j2paa.apps.googleusercontent.com
             client-secret: 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
             scope:
