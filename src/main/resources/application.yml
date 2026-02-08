@@ -2,7 +2,6 @@ spring:
   application:
     name: SolveSync
 
-  # (참고) httpBasic/formLogin은 SecurityConfig에서 비활성화함
   security:
     user:
       name: user
@@ -17,7 +16,6 @@ spring:
             scope:
               - profile
               - email
-            # 기본값(권장): {baseUrl}/login/oauth2/code/{registrationId}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         provider:
           google:
@@ -88,5 +86,4 @@ solvesync:
 
   solve:
     http:
-      # MQ 기반이지만, HTTP로 매우 큰 payload가 들어오는 걸 방지하기 위한 상한(설정값)
       max-batch-size: 5000
