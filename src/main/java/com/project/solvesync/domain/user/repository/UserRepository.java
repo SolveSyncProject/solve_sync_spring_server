@@ -1,5 +1,6 @@
 package com.project.solvesync.domain.user.repository;
 
+import com.project.solvesync.domain.user.entity.AuthProvider;
 import com.project.solvesync.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
 
     boolean existsByUsernameAndIdNot(String username, Long id);
+
+    Optional<User> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
 }

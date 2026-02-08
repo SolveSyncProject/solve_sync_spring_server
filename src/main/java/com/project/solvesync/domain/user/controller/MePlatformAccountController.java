@@ -3,8 +3,10 @@ package com.project.solvesync.domain.user.controller;
 import com.project.solvesync.domain.user.dto.PlatformAccountDtos;
 import com.project.solvesync.domain.user.service.PlatformAccountService;
 import com.project.solvesync.global.exception.BaseResponse;
+import com.project.solvesync.global.security.auth.AuthUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,10 +23,10 @@ public class MePlatformAccountController {
      */
     @PostMapping
     public BaseResponse<Void> upsert(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal AuthUser me,
             @RequestBody @Valid PlatformAccountDtos.UpsertRequest req
     ) {
-        platformAccountService.upsert(userId, req);
+        platformAccountService.upsert(me.userId(), req);
         return BaseResponse.success();
     }
 
@@ -33,8 +35,8 @@ public class MePlatformAccountController {
      */
     @GetMapping
     public BaseResponse<List<PlatformAccountDtos.Response>> list(
-            @RequestHeader("X-User-Id") Long userId
+            @AuthenticationPrincipal AuthUser me
     ) {
-        return BaseResponse.success(platformAccountService.list(userId));
+        return BaseResponse.success(platformAccountService.list(me.userId()));
     }
 }

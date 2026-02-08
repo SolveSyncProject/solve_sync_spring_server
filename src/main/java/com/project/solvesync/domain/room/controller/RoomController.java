@@ -3,8 +3,10 @@ package com.project.solvesync.domain.room.controller;
 import com.project.solvesync.domain.room.dto.RoomDtos;
 import com.project.solvesync.domain.room.service.RoomService;
 import com.project.solvesync.global.exception.BaseResponse;
+import com.project.solvesync.global.security.auth.AuthUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,10 +20,10 @@ public class RoomController {
 
     @PostMapping
     public BaseResponse<RoomDtos.CreateResponse> create(
-            @RequestHeader("X-User-Id") Long ownerId,
+            @AuthenticationPrincipal AuthUser me,
             @RequestBody @Valid RoomDtos.CreateRequest req
     ) {
-        return BaseResponse.success(roomService.createRoom(ownerId, req));
+        return BaseResponse.success(roomService.createRoom(me.userId(), req));
     }
 
     /** public 게시판 */
@@ -42,9 +44,9 @@ public class RoomController {
     /** 모집 완료 후 방장 활성화 */
     @PostMapping("/{roomId}/activate")
     public BaseResponse<RoomDtos.ActivateResponse> activate(
-            @RequestHeader("X-User-Id") Long actorId,
+            @AuthenticationPrincipal AuthUser me,
             @PathVariable Long roomId
     ) {
-        return BaseResponse.success(roomService.activateRoom(actorId, roomId));
+        return BaseResponse.success(roomService.activateRoom(me.userId(), roomId));
     }
 }
