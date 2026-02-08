@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: solvesync-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: solvesync
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+
+    # ✅ 개발 단계에서 매번 "빈 DB"로 시작하고 싶다면 아래 volume을 주석 유지하세요.
+    # 운영/지속 데이터가 필요하면 주석을 해제하세요.
+  #    volumes:
+  #      - solvesync_mysql:/var/lib/mysql
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: solvesync-rabbitmq
+    environment:
+      TZ: Asia/Seoul
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI
+
+#volumes:
+#  solvesync_mysql:
