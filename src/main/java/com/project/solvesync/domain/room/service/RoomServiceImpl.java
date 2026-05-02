@@ -59,6 +59,7 @@ public class RoomServiceImpl implements RoomService {
 
         // 3) 룰 플랫폼 검증
         validateRulePlatforms(req.rulePlatforms());
+        validateOwnerPlatformsWithinRulePlatforms(ownerPlatforms, req.rulePlatforms());
 
         // 4) 룸 생성
         StudyRoom room = StudyRoom.create(
@@ -195,6 +196,19 @@ public class RoomServiceImpl implements RoomService {
             if (min != null && max != null && min > max) {
                 throw new BaseException(BaseResponseStatus.VALIDATION_ERROR, "tierMin <= tierMax 이어야 합니다. platform=" + rp.platform());
             }
+        }
+    }
+
+    private void validateOwnerPlatformsWithinRulePlatforms(Set<Platform> ownerPlatforms, List<RoomDtos.RulePlatform> rulePlatforms) {
+        Set<Platform> allowed = rulePlatforms.stream()
+                .map(RoomDtos.RulePlatform::platform)
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (!allowed.containsAll(ownerPlatforms)) {
+            throw new BaseException(
+                    BaseResponseStatus.INVALID_PLATFORM_SELECTION,
+                    "ownerPlatforms는 rulePlatforms에 포함된 플랫폼만 선택할 수 있습니다."
+            );
         }
     }
 

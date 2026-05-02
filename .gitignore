@@ -24,23 +24,18 @@ target/
 ############################################
 # IDE
 ############################################
-# IntelliJ IDEA
 .idea/
 *.iws
 *.iml
 *.ipr
-
-# VSCode
 .vscode/
-
-# Eclipse / STS
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
-.sts4-cache
+.sts4-cache/
 
 ############################################
 # Logs
@@ -49,26 +44,49 @@ logs/
 *.log
 
 ############################################
-# Env / Secrets (중요)
+# Env / Secrets
 ############################################
-# dotenv
 .env
 .env.*
 !.env.example
 
-# Spring Boot local/secret profile files
-# (권장) application.yml은 "예시/기본값"만 두고, 실제 비밀값은 아래 파일로 분리
+############################################
+# Spring Boot configs
+############################################
+# 실제 로컬/운영 설정 파일은 Git에 올리지 않음
+src/main/resources/application.yml
+src/main/resources/application.yaml
 src/main/resources/application-*.yml
 src/main/resources/application-*.yaml
-!src/main/resources/application.yml
-!src/main/resources/application.yaml
+
+# 공유 가능한 예시 설정만 허용
 !src/main/resources/application-example.yml
 !src/main/resources/application-example.yaml
+!src/test/resources/application-test.yml
+!src/test/resources/application-test.yaml
 
-# Generated resources (빌드 산출물)
-build/resources/
+############################################
+# Docker configs
+############################################
+# 실제 로컬/운영 compose 파일은 Git에 올리지 않음
+docker-compose.yml
+docker-compose.*.yml
+docker-compose.*.yaml
 
+# 공유 가능한 예시 compose만 허용
+!docker-compose.example.yml
+!docker-compose.example.yaml
+
+############################################
+# Docker / Runtime data
+############################################
+**/*-data/
+**/data/
+*.pid
+
+############################################
 # Keys / Certificates
+############################################
 *.pem
 *.key
 *.crt
@@ -77,10 +95,3 @@ build/resources/
 *.pfx
 *.jks
 *.keystore
-
-############################################
-# Docker (로컬 볼륨/오버라이드)
-############################################
-docker-compose.override.yml
-**/*-data/
-**/data/
