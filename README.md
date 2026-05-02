@@ -63,29 +63,6 @@
     - 수집 결과를 SolveSync 내부 API로 전달(push)
     - 필요 시 SolveSync 내부 레지스트리를 pull하여 복구 가능
 
----
-
-## 4. 로컬 실행 준비물
-
-- Java 17
-- Docker / Docker Compose
-- Google OAuth Client ID/Secret (아래 “OAuth 설정” 참고)
-
----
-
-## 5. 환경 변수 설정
-
-> 비밀값은 `.env` 또는 IDE Run Configuration 환경 변수로 주입하는 방식을 권장합니다.
-
-필수:
-- `GOOGLE_CLIENT_ID=...`
-- `GOOGLE_CLIENT_SECRET=...`
-- `SOLVESYNC_JWT_SECRET=...`  (32바이트 이상 권장. Base64 랜덤키 권장)
-
-(선택) DB/RabbitMQ를 application.yml에 하드코딩하지 않고 env로 뺄 경우:
-- `DB_URL=...`
-- `DB_USERNAME=...`
-- `DB_PASSWORD=...`
 
 ### JWT Secret 생성 예시 (macOS/Linux)
 ```bash
