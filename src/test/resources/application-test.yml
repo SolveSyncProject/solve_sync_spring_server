@@ -33,9 +33,29 @@ external:
     enabled: false
 
 solvesync:
+  jwt:
+    secret: test-jwt-secret-key-must-be-at-least-32-bytes
+    issuer: solvesync-test
+    access-token-expires-minutes: 120
+
+  security:
+    oauth2:
+      authorized-redirect-uris:
+        - http://localhost:3000
+
   evaluation:
     enabled: false
 
   maintenance:
     platform-account:
       enabled: false
+
+  mq:
+    daily-summary:
+      exchange: test.solve.exchange
+      queue: test.solve.daily-summary.queue
+      routing-key: test.solve.daily-summary.upsert
+
+  solve:
+    http:
+      max-batch-size: 5000
