@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: SolveSync
+
+  security:
+    user:
+      name: user
+      password: change-me
+
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: change-me
+            client-secret: change-me
+            scope:
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            user-name-attribute: sub
+
+  datasource:
+    url: jdbc:mysql://mysql:3306/solvesync?serverTimezone=Asia/Seoul&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: change-me
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  flyway:
+    enabled: false
+
+external:
+  collector:
+    enabled: false
+    base-url:
+    platform-account-upsert-path: /internal/registry/platform-accounts/upsert
+
+solvesync:
+  jwt:
+    secret: change-me-to-a-long-random-secret-at-least-32-bytes
+    issuer: solvesync
+    access-token-expires-minutes: 120
+
+  security:
+    oauth2:
+      authorized-redirect-uris:
+        - http://localhost:3000
+
+  evaluation:
+    enabled: true
+    grace-hours: 2
+    scheduler:
+      fixed-delay-ms: 6000
+
+  maintenance:
+    platform-account:
+      enabled: true
+      timezone: Asia/Seoul
+      start: "01:30"
+      end: "03:00"
+
+  mq:
+    daily-summary:
+      exchange: solvesync.solve.exchange
+      queue: solvesync.solve.daily-summary.queue
+      routing-key: solvesync.solve.daily-summary.upsert
+      concurrency: 3
+
+  solve:
+    http:
+      max-batch-size: 5000

@@ -1,0 +1,39 @@
+services:
+  app:
+    image: ghcr.io/solvesyncproject/solve_sync_spring_server:latest
+    container_name: solvesync-app
+    volumes:
+      - ./application.yml:/app/config/application.yml:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - rabbitmq
+    restart: always
+
+  mysql:
+    image: mysql:8.0
+    container_name: solvesync-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: change-me
+      MYSQL_DATABASE: solvesync
+      TZ: Asia/Seoul
+    volumes:
+      - solvesync_mysql:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: solvesync-rabbitmq
+    environment:
+      TZ: Asia/Seoul
+    volumes:
+      - solvesync_rabbitmq:/var/lib/rabbitmq
+    restart: always
+
+volumes:
+  solvesync_mysql:
+  solvesync_rabbitmq:
